@@ -3,7 +3,7 @@ import { AppBar, Container, IconButton, Toolbar, Typography } from '@mui/materia
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 
-import Sidebar from './components/Sidebar';
+import Sidebar from '~/layouts/components/Sidebar';
 
 export default function MasterLayout() {
     const [showSidebar, setShowSidebar] = useState(false);
