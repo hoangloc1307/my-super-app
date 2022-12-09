@@ -2,9 +2,20 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Chart } from 'react-google-charts';
 import { Grid, Typography } from '@mui/material';
+import { DataGrid } from '@mui/x-data-grid';
+
+import style from './Covid19.module.scss';
+
+const columns = [
+    { field: 'name', headerName: 'Tỉnh/Thành phố', headerAlign: 'center', align: 'left', flex: 1 },
+    { field: 'cases', headerName: 'Tổng số ca mắc', headerAlign: 'center', align: 'center', flex: 1 },
+    { field: 'casesToday', headerName: 'Số ca mắc mới', headerAlign: 'center', align: 'center', flex: 1 },
+    { field: 'death', headerName: 'Số ca tử vong', headerAlign: 'center', align: 'center', flex: 1 }
+];
 
 export default function Covid19() {
     const [covidData, setCovidData] = useState({});
+    const [pageSize, setPageSize] = useState(5);
 
     useEffect(() => {
         axios
@@ -44,6 +55,14 @@ export default function Covid19() {
             return result;
         }
     };
+
+    const locationsData = (data) => {
+        if (data) {
+            return [...data].map((item, index) => ({ ...item, id: index }));
+        }
+        return [];
+    };
+
     return (
         <>
             <Typography></Typography>
@@ -75,7 +94,24 @@ export default function Covid19() {
                         />
                     </Grid>
                 ))}
-                <Grid item xs={12}></Grid>
+                <Grid item xs={12} sx={{ mt: 5 }}>
+                    <DataGrid
+                        rows={locationsData(covidData?.locations)}
+                        columns={columns}
+                        density="compact"
+                        autoHeight
+                        initialState={{
+                            sorting: {
+                                sortModel: [{ field: 'cases', sort: 'desc' }]
+                            }
+                        }}
+                        disableSelectionOnClick
+                        pageSize={pageSize}
+                        rowsPerPageOptions={[5, 10, 25, 50]}
+                        onPageSizeChange={(value) => setPageSize(value)}
+                        getRowClassName={(params) => (params.indexRelativeToCurrentPage % 2 === 0 ? style.even : 'odd')}
+                    />
+                </Grid>
             </Grid>
         </>
     );

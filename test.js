@@ -1,42 +1,59 @@
+import CheckIcon from '@mui/icons-material/Check';
+import Box from '@mui/joy/Box';
+import Chip from '@mui/joy/Chip';
+import Radio from '@mui/joy/Radio';
+import RadioGroup from '@mui/joy/RadioGroup';
+import Typography from '@mui/joy/Typography';
 import * as React from 'react';
-import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
-import Snackbar from '@mui/material/Snackbar';
-import MuiAlert from '@mui/material/Alert';
 
-const Alert = React.forwardRef(function Alert(props, ref) {
-    return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
-});
-
-export default function CustomizedSnackbars() {
-    const [open, setOpen] = React.useState(false);
-
-    const handleClick = () => {
-        setOpen(true);
-    };
-
-    const handleClose = (event, reason) => {
-        if (reason === 'clickaway') {
-            return;
-        }
-
-        setOpen(false);
-    };
+export default function RadioChip() {
+    const [selected, setSelected] = React.useState('');
 
     return (
-        <Stack spacing={2} sx={{ width: '100%' }}>
-            <Button variant="outlined" onClick={handleClick}>
-                Open success snackbar
-            </Button>
-            <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
-                <Alert onClose={handleClose} severity="success" sx={{ width: '100%' }}>
-                    This is a success message!
-                </Alert>
-            </Snackbar>
-            <Alert severity="error">This is an error message!</Alert>
-            <Alert severity="warning">This is a warning message!</Alert>
-            <Alert severity="info">This is an information message!</Alert>
-            <Alert severity="success">This is a success message!</Alert>
-        </Stack>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Box>
+                <Typography level="h2" fontSize="lg" id="best-movie" mb={2}>
+                    Best Movie
+                </Typography>
+                <RadioGroup name="best-movie" aria-labelledby="best-movie" row sx={{ flexWrap: 'wrap', gap: 1 }}>
+                    {[
+                        'Star trek',
+                        'Batman',
+                        'Spider man',
+                        'Eternals',
+                        'Shang chi',
+                        'Jungle cruise',
+                        'No time to die',
+                        'Thor',
+                        'The hulk'
+                    ].map((name) => {
+                        const checked = selected === name;
+                        return (
+                            <Chip
+                                key={name}
+                                variant={checked ? 'soft' : 'plain'}
+                                color={checked ? 'primary' : 'neutral'}
+                                startDecorator={checked && <CheckIcon sx={{ zIndex: 1, pointerEvents: 'none' }} />}
+                            >
+                                <Radio
+                                    variant="outlined"
+                                    color={checked ? 'primary' : 'neutral'}
+                                    disableIcon
+                                    overlay
+                                    label={name}
+                                    value={name}
+                                    checked={checked}
+                                    onChange={(event) => {
+                                        if (event.target.checked) {
+                                            setSelected(name);
+                                        }
+                                    }}
+                                />
+                            </Chip>
+                        );
+                    })}
+                </RadioGroup>
+            </Box>
+        </Box>
     );
 }

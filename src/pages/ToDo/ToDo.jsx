@@ -1,26 +1,169 @@
-import { Alert, Box, Button, Chip, Snackbar, Stack, TextField, Tooltip, Typography } from '@mui/material';
-import { NoteAdd, MoreHoriz, Check, Delete } from '@mui/icons-material/';
+import { Box, Snackbar } from '@mui/material';
+import { NoteAdd, MoreHoriz, Check, Delete, Close } from '@mui/icons-material/';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { TextField, Button, Typography, RadioGroup, Chip, Radio, Alert, IconButton, Tooltip } from '@mui/joy';
 
 import Status from './components/Status';
 
 export default function ToDo() {
+    // States
+    const [filter, setFilter] = useState('All');
+    const [task, setTask] = useState('');
+    const [pageSize, setPageSize] = useState(5);
+    const [toast, setToast] = useState({});
+    const [taskList, setTaskList] = useState([]);
+
+    useEffect(() => {
+        setTaskList(JSON.parse(localStorage.getItem('todo')) ?? []);
+    }, []);
+
+    const handleAddTask = () => {
+        if (task) {
+            const newTask = {
+                id: uuidv4(),
+                task,
+                status: 'Pending',
+                created_at: new Date().toJSON()
+            };
+
+            // Save to local storage
+            localStorage.setItem('todo', JSON.stringify([...taskList, newTask]));
+
+            // Update state
+            setTaskList([...taskList, newTask]);
+            setTask('');
+
+            // Show toast
+            setToast({
+                show: true,
+                title: 'Success',
+                message: 'Add new task successfully!',
+                color: 'success',
+                undo: null
+            });
+        }
+    };
+
+    const handleDeleteTask = (id) => {
+        // Find index of task
+        const index = taskList.findIndex((task) => task.id === id);
+
+        // Save task list to undo
+        const undoTasks = JSON.parse(JSON.stringify(taskList));
+
+        // Remove item
+        const tasks = [...taskList.slice(0, index), ...taskList.slice(index + 1)];
+
+        // Save to local storage
+        localStorage.setItem('todo', JSON.stringify(tasks));
+
+        // Update state
+        setTaskList(tasks);
+
+        // Show toast
+        setToast({
+            show: true,
+            title: 'Success',
+            message: 'Delete task successfully!',
+            color: 'success',
+            undo: () => {
+                handleHideToast();
+                localStorage.setItem('todo', JSON.stringify(undoTasks));
+                setTaskList(undoTasks);
+            }
+        });
+    };
+
+    const filterTaskList = useMemo(
+        () => (filter === 'All' ? taskList : taskList.filter((item) => item.status === filter)),
+        [taskList, filter]
+    );
+
+    const handleHideToast = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+
+        console.log(event, reason);
+
+        setToast({
+            show: false,
+            title: '',
+            message: '',
+            color: '',
+            undo: null
+        });
+    };
+
+    const handleCompletedTask = (id, row) => {
+        if (row.status === 'Pending') {
+            const tasks = taskList.map((task) => {
+                if (task.id === id && task.status === 'Pending') {
+                    return { ...task, status: 'Completed' };
+                }
+                return task;
+            });
+
+            // Save task list to undo
+            const undoTasks = JSON.parse(JSON.stringify(taskList));
+
+            // Save to local storage
+            localStorage.setItem('todo', JSON.stringify(tasks));
+
+            // Update state
+            setTaskList(tasks);
+
+            // Show toast
+            setToast({
+                show: true,
+                title: 'Success',
+                message: 'Congratulation! Your task is completed. 🎉',
+                color: 'success',
+                undo: () => {
+                    handleHideToast();
+                    localStorage.setItem('todo', JSON.stringify(undoTasks));
+                    setTaskList(undoTasks);
+                }
+            });
+        }
+    };
+
+    const handelEditTask = (field, value, row) => {
+        if (value !== row[field]) {
+            const tasks = taskList.map((task) => {
+                if (task.id === row.id) {
+                    return { ...task, [field]: value };
+                }
+            });
+
+            // Save to local storage
+            localStorage.setItem('todo', JSON.stringify(tasks));
+
+            // Update state
+            setTaskList(tasks);
+        }
+    };
+
+    // Grid col def
     const columns = useMemo(
         () => [
             {
                 field: 'no',
                 headerName: 'No.',
+                flex: 1,
                 filterable: false,
                 sortable: false,
                 disableColumnMenu: true,
+                align: 'center',
+                headerAlign: 'center',
                 renderCell: (params) => params.api.getRowIndex(params.id) + 1
             },
             {
                 field: 'task',
                 headerName: 'Task',
-                width: 300,
+                flex: 5,
                 editable: true,
                 align: 'left',
                 headerAlign: 'center',
@@ -29,7 +172,7 @@ export default function ToDo() {
             {
                 field: 'status',
                 headerName: 'Status',
-                width: 150,
+                flex: 2,
                 editable: false,
                 align: 'center',
                 headerAlign: 'center',
@@ -48,7 +191,7 @@ export default function ToDo() {
             {
                 field: 'created_at',
                 headerName: 'Created At',
-                width: 200,
+                flex: 3,
                 editable: false,
                 align: 'center',
                 headerAlign: 'center',
@@ -63,9 +206,9 @@ export default function ToDo() {
                 field: 'actions',
                 type: 'actions',
                 headerName: 'Actions',
-                width: 100,
+                flex: 2,
                 hideable: false,
-                getActions: ({ id }) => {
+                getActions: ({ id, row }) => {
                     return [
                         <GridActionsCellItem
                             icon={
@@ -74,7 +217,7 @@ export default function ToDo() {
                                 </Tooltip>
                             }
                             label="Done"
-                            onClick={() => handleCompletedTask(id)}
+                            onClick={() => handleCompletedTask(id, row)}
                             color="success"
                         />,
                         <GridActionsCellItem
@@ -91,184 +234,130 @@ export default function ToDo() {
                 }
             }
         ],
-        // eslint-disable-next-line
-        []
+        [handleDeleteTask, handleCompletedTask]
     );
-
-    // States
-    const [filter, setFilter] = useState('All');
-    const [task, setTask] = useState('');
-    const [pageSize, setPageSize] = useState(5);
-    const [taskList, setTaskList] = useState(
-        (() => {
-            return JSON.parse(localStorage.getItem('todo')) ?? [];
-        })()
-    );
-    const [toast, setToast] = useState({
-        show: false,
-        message: '',
-        color: 'success',
-        undo: null
-    });
-
-    // Function handler
-    const handleAddTask = () => {
-        if (task) {
-            const newTask = {
-                id: uuidv4(),
-                task,
-                status: 'Pending',
-                created_at: new Date().toJSON()
-            };
-            localStorage.setItem('todo', JSON.stringify([...taskList, newTask]));
-            setTaskList([...taskList, newTask]);
-            setTask('');
-            setToast({ ...toast, show: true, message: 'Add new task successfully!', color: 'success', undo: null });
-        }
-    };
-
-    const filterTaskList = useMemo(
-        () => (filter === 'All' ? taskList : taskList.filter((item) => item.status === filter)),
-        [taskList, filter]
-    );
-
-    const handleDeleteTask = (id) => {
-        const tasks = taskList.filter((task) => task.id !== id);
-        const undoTasks = JSON.parse(JSON.stringify(taskList));
-        localStorage.setItem('todo', JSON.stringify(tasks));
-        setTaskList(tasks);
-        setToast({
-            ...toast,
-            show: true,
-            message: 'Delete task successfully!',
-            color: 'success',
-            undo: () => {
-                handleHideToast();
-                localStorage.setItem('todo', JSON.stringify(undoTasks));
-                setTaskList([...undoTasks]);
-            }
-        });
-    };
-
-    const handleCompletedTask = (id) => {
-        const tasks = JSON.parse(localStorage.getItem('todo'));
-        const task = tasks.find((task) => task.id === id);
-        if (task.status === 'Pending') {
-            const undoTasks = JSON.parse(JSON.stringify(tasks));
-            task.status = 'Completed';
-            localStorage.setItem('todo', JSON.stringify(tasks));
-            setTaskList([...tasks]);
-            setToast({
-                ...toast,
-                show: true,
-                message: 'Congratulation! Your task is completed. 🎉',
-                color: 'success',
-                undo: () => {
-                    handleHideToast();
-                    localStorage.setItem('todo', JSON.stringify(undoTasks));
-                    setTaskList([...undoTasks]);
-                }
-            });
-        }
-    };
-
-    const handelEditTask = (params) => {
-        const tasks = JSON.parse(localStorage.getItem('todo'));
-        const task = tasks.find((task) => task.id === params.id);
-        task[params.field] = params.value;
-        localStorage.setItem('todo', JSON.stringify(tasks));
-        setTaskList([...tasks]);
-    };
-
-    const handleHideToast = (event, reason) => {
-        if (reason === 'clickaway') {
-            return;
-        }
-
-        setToast({
-            ...toast,
-            show: false,
-            message: '',
-            color: 'success',
-            undo: null
-        });
-    };
 
     return (
         <>
-            <Box sx={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: 2 }}>
-                <TextField
-                    label="Add a new task"
-                    variant="standard"
-                    required
-                    size="small"
-                    fullWidth={true}
-                    sx={{ maxWidth: '500px' }}
-                    value={task}
-                    onChange={(e) => {
-                        setTask(e.target.value);
-                    }}
-                    onKeyDown={(e) => {
-                        if (e.code === 'Enter') {
-                            handleAddTask();
-                        }
-                    }}
-                />
-                <Button variant="contained" startIcon={<NoteAdd />} onClick={handleAddTask}>
-                    Add
-                </Button>
-            </Box>
-            <Box sx={{ mt: 5 }}>
-                <Typography variant="h5" component={'h2'}>
-                    Task list
+            {/* Add new task */}
+            <Box>
+                <Typography level="h2" fontSize="lg" mb={2}>
+                    Create new task
                 </Typography>
-                <Stack direction="row" spacing={1} sx={{ my: 2 }}>
-                    {['All', 'Pending', 'Completed'].map((item) => (
-                        <Chip
-                            key={item}
-                            label={item}
-                            variant={'filled'}
-                            color={filter === item ? 'primary' : 'default'}
-                            onClick={() => {
-                                setFilter(item);
-                            }}
-                        />
-                    ))}
-                </Stack>
-                <Box sx={{ width: '100%' }}>
-                    <DataGrid
-                        rows={filterTaskList}
-                        columns={columns}
-                        density={'standard'}
-                        pageSize={pageSize}
-                        rowsPerPageOptions={[5, 10, 25, 50]}
-                        onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
-                        autoHeight
-                        initialState={{
-                            sorting: {
-                                sortModel: [{ field: 'created_at', sort: 'desc' }]
+                <Box display="flex" alignItems="flex-end" gap={2}>
+                    <TextField
+                        color="primary"
+                        required
+                        label="Task"
+                        value={task}
+                        onChange={(e) => {
+                            setTask(e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.code === 'Enter') {
+                                handleAddTask();
                             }
                         }}
-                        editMode={'cell'}
-                        onCellEditCommit={(params) => handelEditTask(params)}
                     />
+                    <Button onClick={handleAddTask} startDecorator={<NoteAdd />}>
+                        Add
+                    </Button>
                 </Box>
             </Box>
-            <Snackbar open={toast.show} autoHideDuration={5000} onClose={handleHideToast}>
+
+            {/* Task list */}
+            <Box sx={{ mt: 5 }}>
+                {/* Title */}
+                <Typography level="h2" fontSize="lg">
+                    Task list
+                </Typography>
+
+                {/* Filter */}
+                <RadioGroup row sx={{ my: 2, gap: 1 }}>
+                    {['All', 'Pending', 'Completed'].map((item) => {
+                        const checked = filter === item;
+                        return (
+                            <Chip
+                                key={item}
+                                variant={checked ? 'soft' : 'plain'}
+                                color={checked ? 'primary' : 'neutral'}
+                                startDecorator={checked && <Check sx={{ zIndex: 1, pointerEvents: 'none' }} />}
+                            >
+                                <Radio
+                                    disableIcon
+                                    overlay
+                                    label={item}
+                                    value={item}
+                                    checked={checked}
+                                    onChange={(event) => {
+                                        if (event.target.checked) {
+                                            setFilter(item);
+                                        }
+                                    }}
+                                />
+                            </Chip>
+                        );
+                    })}
+                </RadioGroup>
+
+                {/* Grid */}
+                <DataGrid
+                    rows={filterTaskList}
+                    columns={columns}
+                    pageSize={pageSize}
+                    rowsPerPageOptions={[5, 10, 25, 50]}
+                    onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
+                    autoHeight
+                    initialState={{
+                        sorting: {
+                            sortModel: [{ field: 'created_at', sort: 'desc' }]
+                        }
+                    }}
+                    editMode={'cell'}
+                    onCellEditCommit={({ field, value, row }) => handelEditTask(field, value, row)}
+                />
+            </Box>
+
+            {/* Toast */}
+            <Snackbar
+                open={toast.show}
+                autoHideDuration={5000}
+                onClose={handleHideToast}
+                sx={{ width: '100%', maxWidth: '500px' }}
+            >
                 <Alert
-                    onClose={handleHideToast}
-                    severity={toast.color}
-                    variant="filled"
-                    action={
-                        toast.undo ? (
-                            <Button color="inherit" size="small" onClick={toast.undo}>
-                                UNDO
-                            </Button>
-                        ) : null
-                    }
+                    variant="soft"
+                    color={toast.color}
                     sx={{ width: '100%' }}
+                    endDecorator={
+                        <>
+                            {/* Undo */}
+                            {toast.undo ? (
+                                <Button
+                                    variant="soft"
+                                    size="sm"
+                                    color={toast.color}
+                                    sx={{ mr: 1 }}
+                                    onClick={toast.undo}
+                                >
+                                    Undo
+                                </Button>
+                            ) : null}
+                            {/* Close */}
+                            <IconButton variant="soft" size="sm" color={toast.color} onClick={handleHideToast}>
+                                <Close />
+                            </IconButton>
+                        </>
+                    }
                 >
-                    {toast.message}
+                    <div>
+                        <Typography fontWeight="lg" mt={0.25}>
+                            {toast.title}
+                        </Typography>
+                        <Typography fontSize="sm" sx={{ opacity: 0.8 }}>
+                            {toast.message}
+                        </Typography>
+                    </div>
                 </Alert>
             </Snackbar>
         </>

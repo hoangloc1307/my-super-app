@@ -1,5 +1,6 @@
 import { CssBaseline } from '@mui/material';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { CssVarsProvider } from '@mui/joy/styles';
 
 import MasterLayout from './layouts/MasterLayout';
 import Covid19 from './pages/Covid19';
@@ -10,6 +11,7 @@ import ToDo from './pages/ToDo';
 function App() {
     return (
         <BrowserRouter>
+            <CssVarsProvider />
             <CssBaseline />
             <Routes>
                 <Route path="/" element={<MasterLayout />}>
