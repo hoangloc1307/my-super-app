@@ -1,11 +1,9 @@
 import { Box, Snackbar } from '@mui/material';
 import { NoteAdd, MoreHoriz, Check, Delete, Close } from '@mui/icons-material/';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { TextField, Button, Typography, RadioGroup, Chip, Radio, Alert, IconButton, Tooltip } from '@mui/joy';
-
-import Status from './components/Status';
 
 export default function ToDo() {
     // States
@@ -46,68 +44,16 @@ export default function ToDo() {
         }
     };
 
-    const handleDeleteTask = (id) => {
-        // Find index of task
-        const index = taskList.findIndex((task) => task.id === id);
-
-        // Save task list to undo
-        const undoTasks = JSON.parse(JSON.stringify(taskList));
-
-        // Remove item
-        const tasks = [...taskList.slice(0, index), ...taskList.slice(index + 1)];
-
-        // Save to local storage
-        localStorage.setItem('todo', JSON.stringify(tasks));
-
-        // Update state
-        setTaskList(tasks);
-
-        // Show toast
-        setToast({
-            show: true,
-            title: 'Success',
-            message: 'Delete task successfully!',
-            color: 'success',
-            undo: () => {
-                handleHideToast();
-                localStorage.setItem('todo', JSON.stringify(undoTasks));
-                setTaskList(undoTasks);
-            }
-        });
-    };
-
-    const filterTaskList = useMemo(
-        () => (filter === 'All' ? taskList : taskList.filter((item) => item.status === filter)),
-        [taskList, filter]
-    );
-
-    const handleHideToast = (event, reason) => {
-        if (reason === 'clickaway') {
-            return;
-        }
-
-        console.log(event, reason);
-
-        setToast({
-            show: false,
-            title: '',
-            message: '',
-            color: '',
-            undo: null
-        });
-    };
-
-    const handleCompletedTask = (id, row) => {
-        if (row.status === 'Pending') {
-            const tasks = taskList.map((task) => {
-                if (task.id === id && task.status === 'Pending') {
-                    return { ...task, status: 'Completed' };
-                }
-                return task;
-            });
+    const handleDeleteTask = useCallback(
+        (id) => {
+            // Find index of task
+            const index = taskList.findIndex((task) => task.id === id);
 
             // Save task list to undo
             const undoTasks = JSON.parse(JSON.stringify(taskList));
+
+            // Remove item
+            const tasks = [...taskList.slice(0, index), ...taskList.slice(index + 1)];
 
             // Save to local storage
             localStorage.setItem('todo', JSON.stringify(tasks));
@@ -119,7 +65,7 @@ export default function ToDo() {
             setToast({
                 show: true,
                 title: 'Success',
-                message: 'Congratulation! Your task is completed. 🎉',
+                message: 'Delete task successfully!',
                 color: 'success',
                 undo: () => {
                     handleHideToast();
@@ -127,23 +73,78 @@ export default function ToDo() {
                     setTaskList(undoTasks);
                 }
             });
+        },
+        [taskList]
+    );
+
+    const filterTaskList = useMemo(
+        () => (filter === 'All' ? taskList : taskList.filter((item) => item.status === filter)),
+        [taskList, filter]
+    );
+
+    const handleHideToast = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
         }
+
+        setToast({
+            show: false,
+            title: '',
+            message: '',
+            color: '',
+            undo: null
+        });
     };
 
-    const handelEditTask = (field, value, row) => {
-        if (value !== row[field]) {
-            const tasks = taskList.map((task) => {
-                if (task.id === row.id) {
-                    return { ...task, [field]: value };
-                }
-            });
+    const handleCompletedTask = useCallback(
+        (id, row) => {
+            if (row.status === 'Pending') {
+                const tasks = taskList.map((task) => {
+                    if (task.id === id && task.status === 'Pending') {
+                        return { ...task, status: 'Completed' };
+                    }
+                    return task;
+                });
 
-            // Save to local storage
-            localStorage.setItem('todo', JSON.stringify(tasks));
+                // Save task list to undo
+                const undoTasks = JSON.parse(JSON.stringify(taskList));
 
-            // Update state
-            setTaskList(tasks);
-        }
+                // Save to local storage
+                localStorage.setItem('todo', JSON.stringify(tasks));
+
+                // Update state
+                setTaskList(tasks);
+
+                // Show toast
+                setToast({
+                    show: true,
+                    title: 'Success',
+                    message: 'Congratulation! Your task is completed. 🎉',
+                    color: 'success',
+                    undo: () => {
+                        handleHideToast();
+                        localStorage.setItem('todo', JSON.stringify(undoTasks));
+                        setTaskList(undoTasks);
+                    }
+                });
+            }
+        },
+        [taskList]
+    );
+
+    const handelEditTask = (id, field, value) => {
+        const tasks = taskList.map((task) => {
+            if (task.id === id) {
+                return { ...task, [field]: value };
+            }
+            return task;
+        });
+
+        // Save to local storage
+        localStorage.setItem('todo', JSON.stringify(tasks));
+
+        // Update state
+        setTaskList(tasks);
     };
 
     // Grid col def
@@ -164,6 +165,7 @@ export default function ToDo() {
                 field: 'task',
                 headerName: 'Task',
                 flex: 5,
+                minWidth: 280,
                 editable: true,
                 align: 'left',
                 headerAlign: 'center',
@@ -174,17 +176,18 @@ export default function ToDo() {
                 headerName: 'Status',
                 flex: 2,
                 editable: false,
+                minWidth: 120,
                 align: 'center',
                 headerAlign: 'center',
-                sortable: false,
-                filterable: false,
-                hideable: false,
-                disableColumnMenu: true,
                 renderCell: (params) => {
                     return params.value === 'Pending' ? (
-                        <Status icon={<MoreHoriz />} label="Pending" color="warning" />
+                        <Chip startDecorator={<MoreHoriz />} variant="solid" size="sm" color="warning">
+                            {'Pending'}
+                        </Chip>
                     ) : (
-                        <Status icon={<Check />} label="Completed" color="success" />
+                        <Chip startDecorator={<Check />} variant="solid" size="sm" color="success">
+                            {'Completed'}
+                        </Chip>
                     );
                 }
             },
@@ -192,6 +195,7 @@ export default function ToDo() {
                 field: 'created_at',
                 headerName: 'Created At',
                 flex: 3,
+                minWidth: 180,
                 editable: false,
                 align: 'center',
                 headerAlign: 'center',
@@ -207,6 +211,7 @@ export default function ToDo() {
                 type: 'actions',
                 headerName: 'Actions',
                 flex: 2,
+                minWidth: 120,
                 hideable: false,
                 getActions: ({ id, row }) => {
                     return [
@@ -250,6 +255,9 @@ export default function ToDo() {
                         required
                         label="Task"
                         value={task}
+                        size="sm"
+                        fullWidth
+                        sx={{ maxWidth: '500px' }}
                         onChange={(e) => {
                             setTask(e.target.value);
                         }}
@@ -259,7 +267,7 @@ export default function ToDo() {
                             }
                         }}
                     />
-                    <Button onClick={handleAddTask} startDecorator={<NoteAdd />}>
+                    <Button onClick={handleAddTask} startDecorator={<NoteAdd />} size="sm">
                         Add
                     </Button>
                 </Box>
@@ -279,12 +287,14 @@ export default function ToDo() {
                         return (
                             <Chip
                                 key={item}
-                                variant={checked ? 'soft' : 'plain'}
+                                variant={checked ? 'solid' : 'soft'}
                                 color={checked ? 'primary' : 'neutral'}
-                                startDecorator={checked && <Check sx={{ zIndex: 1, pointerEvents: 'none' }} />}
+                                size="sm"
                             >
                                 <Radio
                                     disableIcon
+                                    variant={checked ? 'solid' : 'soft'}
+                                    size="sm"
                                     overlay
                                     label={item}
                                     value={item}
@@ -314,17 +324,12 @@ export default function ToDo() {
                         }
                     }}
                     editMode={'cell'}
-                    onCellEditCommit={({ field, value, row }) => handelEditTask(field, value, row)}
+                    onCellEditCommit={({ field, value, id }) => handelEditTask(id, field, value)}
                 />
             </Box>
 
             {/* Toast */}
-            <Snackbar
-                open={toast.show}
-                autoHideDuration={5000}
-                onClose={handleHideToast}
-                sx={{ width: '100%', maxWidth: '500px' }}
-            >
+            <Snackbar open={toast.show} autoHideDuration={5000} onClose={handleHideToast} sx={{ maxWidth: '500px' }}>
                 <Alert
                     variant="soft"
                     color={toast.color}
