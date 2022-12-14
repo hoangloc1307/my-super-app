@@ -4,6 +4,8 @@ import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { TextField, Button, Typography, RadioGroup, Chip, Radio, Alert, IconButton, Tooltip } from '@mui/joy';
+import moment from 'moment';
+// import 'moment/locale/vi';
 
 export default function ToDo() {
     // States
@@ -200,10 +202,11 @@ export default function ToDo() {
                 align: 'center',
                 headerAlign: 'center',
                 renderCell: (params) => {
-                    return new Date(params.value).toLocaleString('vi', {
-                        dateStyle: 'short',
-                        timeStyle: 'medium'
-                    });
+                    return (
+                        <Tooltip title={moment(params.value).format('DD/MM/YYYY hh:mm:ss')}>
+                            <span>{moment(params.value).locale('vi').fromNow()}</span>
+                        </Tooltip>
+                    );
                 }
             },
             {
@@ -289,7 +292,7 @@ export default function ToDo() {
                                 key={item}
                                 variant={checked ? 'solid' : 'soft'}
                                 color={checked ? 'primary' : 'neutral'}
-                                size="sm"
+                                // size="sm"
                             >
                                 <Radio
                                     disableIcon

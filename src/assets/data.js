@@ -1,4 +1,4 @@
-import { Collections, Coronavirus, Dashboard, NoteAlt } from '@mui/icons-material';
+import { Collections, Coronavirus, Dashboard, NoteAlt, Compress } from '@mui/icons-material';
 
 export const Menu = [
     {
@@ -15,6 +15,11 @@ export const Menu = [
         to: '/covid',
         icon: <Coronavirus />,
         title: 'Covid-19'
+    },
+    {
+        to: '/image-compressor',
+        icon: <Compress />,
+        title: 'Compress Image'
     },
     {
         to: '/gallery',

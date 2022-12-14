@@ -1,0 +1,9 @@
+POST https://api.tinify.com/shrink
+Authorization: Basic YXBpOmdaUlR2MnZZWmRwdzdEelZnNk03R3RkbDlxTHBTZzE1
+Content-Type: application/json
+
+{
+  "source": {
+    "url": "https://i.imgur.com/zDad6bb.jpg"
+  }
+}
