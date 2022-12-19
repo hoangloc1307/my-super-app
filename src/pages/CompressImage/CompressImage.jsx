@@ -2,6 +2,7 @@ import { Button, Stack } from '@mui/joy';
 import { Delete, FileUpload, FileDownload, PhotoSizeSelectLarge } from '@mui/icons-material';
 import { useState } from 'react';
 import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
 import { IconButton, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 
 import { numberWithSizeUnit } from '~/utils/stringFormat';
@@ -17,14 +18,14 @@ export default function CompressImage() {
         while (uploadedFiles.length < litmitImage && uploadingFiles.length > 0) {
             const uploadingFile = uploadingFiles.shift();
             let isExists = false;
-            for (const file of uploadedFiles) {
-                if (file.name === uploadingFile.name && file.size === uploadingFile.size) {
+            for (const item of uploadedFiles) {
+                if (item.file.name === uploadingFile.name && item.file.size === uploadingFile.size) {
                     isExists = true;
                     break;
                 }
             }
             if (!isExists) {
-                uploadedFiles.push(uploadingFile);
+                uploadedFiles.push({ id: uuidv4(), file: uploadingFile, status: 'Not optimize' });
             }
         }
         if (uploadedFiles.length !== selectedFiles.length) {
@@ -32,8 +33,8 @@ export default function CompressImage() {
         }
     };
 
-    const handleRemoveImage = (file) => {
-        const index = selectedFiles.findIndex((item) => item.name === file.name && item.size === file.size);
+    const handleRemoveImage = (id) => {
+        const index = selectedFiles.findIndex((item) => item.id === id);
 
         const uploadedFiles = [...selectedFiles.slice(0, index), ...selectedFiles.slice(index + 1)];
 
@@ -41,35 +42,14 @@ export default function CompressImage() {
     };
 
     const handleOptimize = async () => {
-        // const data = JSON.stringify({
-        //     source: {
-        //         url: 'https://i.imgur.com/zDad6bb.jpg'
-        //     }
-        // });
-
-        // const config = {
-        //     headers: {
-        //         'Content-Type': 'application/json'
-        //     },
-        //     withCredentials: false,
-        //     auth: {
-        //         username: 'api',
-        //         password: process.env.REACT_APP_TINIFY_API_KEY
-        //     }
-        // };
-
-        // axios
-        //     .post('https://api.tinify.com/shrink', data, config)
-        //     .then((res) => console.log(res))
-        //     .catch((error) => console.log(error));
-
-        const file = selectedFiles[0];
-        // const fileReader = new FileReader();
-        // fileReader.onload = () => {
-        //     console.log(fileReader.result);
-        // };
-        // fileReader.readAsArrayBuffer(file);
-        console.log(URL.createObjectURL(file));
+        for (const item of selectedFiles) {
+            const result = await axios.post('http://localhost:8000/image/compress', item.file, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            console.log(result);
+        }
     };
 
     return (
@@ -97,15 +77,19 @@ export default function CompressImage() {
                     <TableBody>
                         {selectedFiles.length > 0 ? (
                             selectedFiles.map((item) => (
-                                <TableRow key={item.name + item.size}>
-                                    <TableCell>{item.name}</TableCell>
-                                    <TableCell>{numberWithSizeUnit(item.size)}</TableCell>
-                                    <TableCell>Not optimize</TableCell>
+                                <TableRow key={item.id}>
+                                    <TableCell>{item.file?.name}</TableCell>
+                                    <TableCell>{numberWithSizeUnit(item.file?.size)}</TableCell>
+                                    <TableCell>{item.status}</TableCell>
                                     <TableCell>
                                         <IconButton size="small" color="primary">
                                             <FileDownload />
                                         </IconButton>
-                                        <IconButton size="small" color="error" onClick={() => handleRemoveImage(item)}>
+                                        <IconButton
+                                            size="small"
+                                            color="error"
+                                            onClick={() => handleRemoveImage(item.id)}
+                                        >
                                             <Delete />
                                         </IconButton>
                                     </TableCell>
