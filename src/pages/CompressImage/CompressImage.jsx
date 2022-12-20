@@ -15,10 +15,20 @@ export default function CompressImage() {
     const handleUpload = (event) => {
         const uploadingFiles = [...event.target.files];
         const uploadedFiles = [...selectedFiles];
+
+        // Upload maximum 20 images
         while (uploadedFiles.length < litmitImage && uploadingFiles.length > 0) {
             const uploadingFile = uploadingFiles.shift();
+
+            // Check type is png/jpeg
+            if (uploadingFile.type !== 'image/png' && uploadingFile.type !== 'image/jpeg') {
+                continue;
+            }
+
+            // Check image was uploaded before
             let isExists = false;
             for (const item of uploadedFiles) {
+                // Check exists by name and size
                 if (item.file.name === uploadingFile.name && item.file.size === uploadingFile.size) {
                     isExists = true;
                     break;
@@ -28,6 +38,8 @@ export default function CompressImage() {
                 uploadedFiles.push({ id: uuidv4(), file: uploadingFile, status: 'Not optimize' });
             }
         }
+
+        // If have new image upload then update state
         if (uploadedFiles.length !== selectedFiles.length) {
             setSelectedFiles(uploadedFiles);
         }
@@ -35,22 +47,42 @@ export default function CompressImage() {
 
     const handleRemoveImage = (id) => {
         const index = selectedFiles.findIndex((item) => item.id === id);
-
         const uploadedFiles = [...selectedFiles.slice(0, index), ...selectedFiles.slice(index + 1)];
-
         setSelectedFiles(uploadedFiles);
     };
 
     const handleOptimize = async () => {
-        for (const item of selectedFiles) {
-            const result = await axios.post('http://localhost:8000/image/compress', item.file, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
+        try {
+            for (const item of selectedFiles) {
+                let formData = new FormData();
+                formData.append('file', item.file);
+                updateStatus(item, 'Optimizing...');
+                const result = await axios.post('http://localhost:8000/image/compress', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
+                if (result.data.status === 'success') {
+                    updateStatus(item, 'Optimized');
                 }
-            });
-            console.log(result);
+                console.log(result);
+            }
+        } catch (err) {
+            console.log(err);
         }
     };
+
+    function updateStatus(image, status) {
+        const index = selectedFiles.findIndex((item) => item.id === image.id);
+        console.log(index);
+        const newList = [
+            ...selectedFiles.slice(0, index),
+            { ...selectedFiles[index], status },
+            ...selectedFiles.slice(index + 1)
+        ];
+        console.log(newList);
+        setSelectedFiles(newList);
+    }
 
     return (
         <>
